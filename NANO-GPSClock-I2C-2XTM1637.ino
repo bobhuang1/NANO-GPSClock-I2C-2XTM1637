@@ -245,7 +245,7 @@ void loop() {
       if (counter == 10)
       {
         showTemperature();
-        smartDelay(2000);
+        smartDelay(3000);
       }
       counter++;
       if (counter > 10)
