@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include <TimeLib.h>                   // struct timeval
-#include <TinyGPS++.h>
+#include <TinyGPSPlus.h>
 #include <SoftwareSerial.h>
 #include <TM1637Display.h>
 
@@ -61,6 +61,16 @@ int GPSAnimationCounter = 0;
 long prevAnimationDisplay = 0; // Count for when time last displayed
 long prevTimeUpdate = 0;
 
+// MF52D 2K, 3435 25C
+const int    SAMPLE_NUMBER      = 100;
+const double BALANCE_RESISTOR   = 2000.0;
+const double MAX_ADC            = 1023.0;
+const double BETA               = 3435.0;
+const double ROOM_TEMP          = 298.15;
+const double RESISTOR_ROOM_TEMP = 2000.0;
+double currentTemperature = 0;
+int thermistorPin = A1;
+
 void setup()   {
   delay(100);
   Serial.begin(115200);
@@ -70,6 +80,56 @@ void setup()   {
   display2.setSegments(SEG_HELO);
   Serial_GPS.begin(GPSBaud); // Start GPS Serial Connection
   smartDelay(2000);
+}
+
+void showTemperature() {
+  // variables that live in this function
+  double rThermistor = 0;            // Holds thermistor resistance value
+  double tKelvin     = 0;            // Holds calculated temperature
+  double tCelsius    = 0;            // Hold temperature in celsius
+  double adcAverage  = 0;            // Holds the average voltage measurement
+  int    adcSamples[SAMPLE_NUMBER];  // Array to hold each voltage measurement
+
+  /* Calculate thermistor's average resistance:
+     As mentioned in the top of the code, we will sample the ADC pin a few times
+     to get a bunch of samples. A slight delay is added to properly have the
+     analogRead function sample properly */
+  
+  for (int i = 0; i < SAMPLE_NUMBER; i++) 
+  {
+    adcSamples[i] = analogRead(thermistorPin);  // read from pin and store
+    delay(2);        // wait 10 milliseconds
+  }
+
+  /* Then, we will simply average all of those samples up for a "stiffer"
+     measurement. */
+  for (int i = 0; i < SAMPLE_NUMBER; i++) 
+  {
+    adcAverage += adcSamples[i];      // add all samples up . . .
+  }
+  adcAverage /= SAMPLE_NUMBER;        // . . . average it w/ divide
+
+  /* Here we calculate the thermistor’s resistance using the equation 
+     discussed in the article. */
+  rThermistor = BALANCE_RESISTOR * ( (MAX_ADC / adcAverage) - 1);
+
+  /* Here is where the Beta equation is used, but it is different
+     from what the article describes. Don't worry! It has been rearranged
+     algebraically to give a "better" looking formula. I encourage you
+     to try to manipulate the equation from the article yourself to get
+     better at algebra. And if not, just use what is shown here and take it
+     for granted or input the formula directly from the article, exactly
+     as it is shown. Either way will work! */
+  tKelvin = (BETA * ROOM_TEMP) / 
+            (BETA + (ROOM_TEMP * log(rThermistor / RESISTOR_ROOM_TEMP)));
+
+  /* I will use the units of Celsius to indicate temperature. I did this
+     just so I can see the typical room temperature, which is 25 degrees
+     Celsius, when I first try the program out. I prefer Fahrenheit, but
+     I leave it up to you to either change this function, or create
+     another function which converts between the two units. */
+  tCelsius = tKelvin - 273.15;  // convert kelvin to celsius 
+  display2.showNumberDec(tCelsius + 0.5);
 }
 
 void loop() {
@@ -93,28 +153,25 @@ void loop() {
   }
   else
   {
+    showTemperature();
     if (millis() - prevAnimationDisplay > 200)
     {
       prevAnimationDisplay = millis();
       if (GPSAnimationCounter == 0)
       {
         display1.setSegments(SEG_GPS1);
-        display2.setSegments(SEG_GPS1);
       }
       else if (GPSAnimationCounter == 1)
       {
         display1.setSegments(SEG_GPS2);
-        display2.setSegments(SEG_GPS2);
       }
       else if (GPSAnimationCounter == 2)
       {
         display1.setSegments(SEG_GPS3);
-        display2.setSegments(SEG_GPS3);
       }
       else if (GPSAnimationCounter == 3)
       {
         display1.setSegments(SEG_GPS4);
-        display2.setSegments(SEG_GPS4);
       }
       GPSAnimationCounter++;
       if (GPSAnimationCounter > 3)
@@ -129,7 +186,6 @@ void loop() {
     {
       display1.setBrightness(0xF);
       display2.setBrightness(0xF);
-
     }
     else
     {
@@ -143,7 +199,6 @@ void loop() {
       {
         int Clock = hour() * 100 + minute();
         display1.showNumberDec(Clock, true);
-        Serial.println(Clock);
         smartDelay(500);
         uint8_t segto = 0x80 | display1.encodeDigit((Clock / 100) % 10);
         display1.setSegments(&segto, 1, 1);
@@ -153,15 +208,8 @@ void loop() {
       display2.showNumberDec(Clock, true);
       if (counter == 10)
       {
-        for (int i = 0; i < 20; ++i)
-        {
-          int Speed = round(gps.speed.kmph());
-          if (Speed > 0 && Speed < 200)
-          {
-            display2.showNumberDec(Speed, false);
-            smartDelay(100);
-          }
-        }
+        showTemperature();
+        delay(2000);
       }
       counter++;
       if (counter > 10)
@@ -183,4 +231,3 @@ static void smartDelay(unsigned long ms)
       gps.encode(Serial_GPS.read());
   } while (millis() - start < ms);
 }
-
