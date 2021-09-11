@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include <TimeLib.h>                   // struct timeval
-#include <TinyGPSPlus.h>
+#include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include <TM1637Display.h>
 
@@ -68,7 +68,8 @@ const double MAX_ADC            = 1023.0;
 const double BETA               = 3435.0;
 const double ROOM_TEMP          = 298.15;
 const double RESISTOR_ROOM_TEMP = 2000.0;
-double currentTemperature = 0;
+double currentTemperature = -60.0;
+double mimimumTemperature = -60.0;
 int thermistorPin = A1;
 
 void setup()   {
@@ -82,7 +83,7 @@ void setup()   {
   smartDelay(2000);
 }
 
-void showTemperature() {
+void getTemperature() {
   // variables that live in this function
   double rThermistor = 0;            // Holds thermistor resistance value
   double tKelvin     = 0;            // Holds calculated temperature
@@ -98,7 +99,7 @@ void showTemperature() {
   for (int i = 0; i < SAMPLE_NUMBER; i++) 
   {
     adcSamples[i] = analogRead(thermistorPin);  // read from pin and store
-    delay(2);        // wait 10 milliseconds
+    smartDelay(2);        // wait 10 milliseconds
   }
 
   /* Then, we will simply average all of those samples up for a "stiffer"
@@ -128,11 +129,15 @@ void showTemperature() {
      Celsius, when I first try the program out. I prefer Fahrenheit, but
      I leave it up to you to either change this function, or create
      another function which converts between the two units. */
-  tCelsius = tKelvin - 273.15;  // convert kelvin to celsius 
-  display2.showNumberDec(tCelsius + 0.5);
+  currentTemperature = tKelvin - 273.15 + 0.5;  // convert kelvin to celsius 
+}
+
+void showTemperature() {
+    display2.showNumberDec(currentTemperature);
 }
 
 void loop() {
+  getTemperature();  
   smartDelay(100);
   Year = gps.date.year();
   byte Month = gps.date.month();
@@ -153,25 +158,56 @@ void loop() {
   }
   else
   {
-    showTemperature();
     if (millis() - prevAnimationDisplay > 200)
     {
       prevAnimationDisplay = millis();
       if (GPSAnimationCounter == 0)
       {
         display1.setSegments(SEG_GPS1);
+        if (currentTemperature > mimimumTemperature)
+        {
+          showTemperature();
+        }
+        else
+        {
+          display2.setSegments(SEG_GPS1);
+        }
       }
       else if (GPSAnimationCounter == 1)
       {
         display1.setSegments(SEG_GPS2);
+        if (currentTemperature > mimimumTemperature)
+        {
+          showTemperature();
+        }
+        else
+        {
+          display2.setSegments(SEG_GPS2);
+        }
       }
       else if (GPSAnimationCounter == 2)
       {
         display1.setSegments(SEG_GPS3);
+        if (currentTemperature > mimimumTemperature)
+        {
+          showTemperature();
+        }
+        else
+        {
+          display2.setSegments(SEG_GPS3);
+        }
       }
       else if (GPSAnimationCounter == 3)
       {
         display1.setSegments(SEG_GPS4);
+        if (currentTemperature > mimimumTemperature)
+        {
+          showTemperature();
+        }
+        else
+        {
+          display2.setSegments(SEG_GPS4);
+        }
       }
       GPSAnimationCounter++;
       if (GPSAnimationCounter > 3)
@@ -209,7 +245,7 @@ void loop() {
       if (counter == 10)
       {
         showTemperature();
-        delay(2000);
+        smartDelay(2000);
       }
       counter++;
       if (counter > 10)
