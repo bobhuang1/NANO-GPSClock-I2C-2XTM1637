@@ -65,7 +65,7 @@ long prevTimeUpdate = 0;
 const int    SAMPLE_NUMBER      = 100;
 const double BALANCE_RESISTOR   = 2400.0;
 const double BETA               = 3435.0;
-const double ROOM_TEMP          = 294.15; // 298.15
+const double ROOM_TEMP          = 298.15; // 298.15
 const double RESISTOR_ROOM_TEMP = 2222.22222222;
 double currentTemperature = -60.0;
 double mimimumTemperature = -60.0;
@@ -140,7 +140,7 @@ Serial.println(rThermistor);
      Celsius, when I first try the program out. I prefer Fahrenheit, but
      I leave it up to you to either change this function, or create
      another function which converts between the two units. */
-  currentTemperature = tKelvin - 273.15 + 0.5;  // convert kelvin to celsius 
+  currentTemperature = tKelvin - 273.15 - 4 + 0.5;  // convert kelvin to celsius 
 }
 
 void showTemperature() {
