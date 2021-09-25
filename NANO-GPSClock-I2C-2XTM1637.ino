@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include <TimeLib.h>                   // struct timeval
-#include <TinyGPS++.h>
+#include <TinyGPSPlus.h>
 #include <SoftwareSerial.h>
 #include <TM1637Display.h>
 
@@ -63,14 +63,14 @@ long prevTimeUpdate = 0;
 
 // MF52D 2K, 3435 25C
 const int    SAMPLE_NUMBER      = 100;
-const double BALANCE_RESISTOR   = 2000.0;
-const double MAX_ADC            = 1023.0;
+const double BALANCE_RESISTOR   = 2400.0;
 const double BETA               = 3435.0;
-const double ROOM_TEMP          = 298.15;
-const double RESISTOR_ROOM_TEMP = 2000.0;
+const double ROOM_TEMP          = 294.15; // 298.15
+const double RESISTOR_ROOM_TEMP = 2222.22222222;
 double currentTemperature = -60.0;
 double mimimumTemperature = -60.0;
-int thermistorPin = A1;
+int thermistorPin = A0;
+int vccPin = A2;
 
 void setup()   {
   delay(100);
@@ -89,8 +89,10 @@ void getTemperature() {
   double tKelvin     = 0;            // Holds calculated temperature
   double tCelsius    = 0;            // Hold temperature in celsius
   double adcAverage  = 0;            // Holds the average voltage measurement
+  double adcVccAverage = 0;
   int    adcSamples[SAMPLE_NUMBER];  // Array to hold each voltage measurement
-
+  int    adcVccSamples[SAMPLE_NUMBER];  // Array to hold each voltage measurement for Vcc
+   
   /* Calculate thermistor's average resistance:
      As mentioned in the top of the code, we will sample the ADC pin a few times
      to get a bunch of samples. A slight delay is added to properly have the
@@ -99,6 +101,7 @@ void getTemperature() {
   for (int i = 0; i < SAMPLE_NUMBER; i++) 
   {
     adcSamples[i] = analogRead(thermistorPin);  // read from pin and store
+    adcVccSamples[i] = analogRead(vccPin);  // read from Vcc pin and store
     smartDelay(2);        // wait 10 milliseconds
   }
 
@@ -107,12 +110,20 @@ void getTemperature() {
   for (int i = 0; i < SAMPLE_NUMBER; i++) 
   {
     adcAverage += adcSamples[i];      // add all samples up . . .
+    adcVccAverage += adcVccSamples[i];
   }
   adcAverage /= SAMPLE_NUMBER;        // . . . average it w/ divide
+Serial.print("adcAverage: ");
+Serial.println(adcAverage);
 
+  adcVccAverage /= SAMPLE_NUMBER;
+Serial.print("adcVccAverage: ");
+Serial.println(adcVccAverage);
   /* Here we calculate the thermistor’s resistance using the equation 
      discussed in the article. */
-  rThermistor = BALANCE_RESISTOR * ( (MAX_ADC / adcAverage) - 1);
+  rThermistor = BALANCE_RESISTOR * adcAverage / (adcVccAverage - adcAverage);
+Serial.print("rThermistor: ");
+Serial.println(rThermistor);
 
   /* Here is where the Beta equation is used, but it is different
      from what the article describes. Don't worry! It has been rearranged
