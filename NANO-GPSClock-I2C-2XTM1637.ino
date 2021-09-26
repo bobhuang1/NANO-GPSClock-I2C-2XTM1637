@@ -63,10 +63,10 @@ long prevTimeUpdate = 0;
 
 // MF52D 2K, 3435 25C
 const int    SAMPLE_NUMBER      = 100;
-const double BALANCE_RESISTOR   = 2400.0;
+const double BALANCE_RESISTOR   = 2405.0;
 const double BETA               = 3435.0;
 const double ROOM_TEMP          = 298.15; // 298.15
-const double RESISTOR_ROOM_TEMP = 2222.22222222;
+const double RESISTOR_ROOM_TEMP = 2000;
 double currentTemperature = -60.0;
 double mimimumTemperature = -60.0;
 int thermistorPin = A0;
@@ -132,15 +132,19 @@ Serial.println(rThermistor);
      better at algebra. And if not, just use what is shown here and take it
      for granted or input the formula directly from the article, exactly
      as it is shown. Either way will work! */
+
+  tKelvin =  1 / ((1 / ROOM_TEMP) + ((log(rThermistor / RESISTOR_ROOM_TEMP)) / BETA));
+
+/*     
   tKelvin = (BETA * ROOM_TEMP) / 
             (BETA + (ROOM_TEMP * log(rThermistor / RESISTOR_ROOM_TEMP)));
-
+*/
   /* I will use the units of Celsius to indicate temperature. I did this
      just so I can see the typical room temperature, which is 25 degrees
      Celsius, when I first try the program out. I prefer Fahrenheit, but
      I leave it up to you to either change this function, or create
      another function which converts between the two units. */
-  currentTemperature = tKelvin - 273.15 - 4 + 0.5;  // convert kelvin to celsius 
+  currentTemperature = tKelvin - 273.15 - 1 ;  // convert kelvin to celsius 
 }
 
 void showTemperature() {
