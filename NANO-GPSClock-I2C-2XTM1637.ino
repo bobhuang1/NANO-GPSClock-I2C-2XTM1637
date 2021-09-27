@@ -62,11 +62,13 @@ long prevAnimationDisplay = 0; // Count for when time last displayed
 long prevTimeUpdate = 0;
 
 // MF52D 2K, 3435 25C
-const int    SAMPLE_NUMBER      = 100;
-const double BALANCE_RESISTOR   = 2405.0;
-const double BETA               = 3435.0;
+const int    SAMPLE_NUMBER      = 200;
+const double BALANCE_RESISTOR   = 100300.0;
+const double BETA               = 3950.0;
 const double ROOM_TEMP          = 298.15; // 298.15
-const double RESISTOR_ROOM_TEMP = 2000;
+const double KELVIN_TO_CELCIUS  =  273.15; 
+const double RESISTOR_ROOM_TEMP = 96700.0; // 92700
+const double TEMPERATURE_CORRECTION = 0.25;
 double currentTemperature = -60.0;
 double mimimumTemperature = -60.0;
 int thermistorPin = A0;
@@ -102,7 +104,6 @@ void getTemperature() {
   {
     adcSamples[i] = analogRead(thermistorPin);  // read from pin and store
     adcVccSamples[i] = analogRead(vccPin);  // read from Vcc pin and store
-    smartDelay(2);        // wait 10 milliseconds
   }
 
   /* Then, we will simply average all of those samples up for a "stiffer"
@@ -144,11 +145,35 @@ Serial.println(rThermistor);
      Celsius, when I first try the program out. I prefer Fahrenheit, but
      I leave it up to you to either change this function, or create
      another function which converts between the two units. */
-  currentTemperature = tKelvin - 273.15 - 1 ;  // convert kelvin to celsius 
+  currentTemperature = tKelvin - KELVIN_TO_CELCIUS + TEMPERATURE_CORRECTION ;  // convert kelvin to celsius 
+Serial.print("currentTemperature: ");
+Serial.println(currentTemperature);
+
+}
+
+char* string2char(String command){
+    if(command.length()!=0){
+        char *p = const_cast<char*>(command.c_str());
+        return p;
+    }
 }
 
 void showTemperature() {
-    display2.showNumberDec(currentTemperature);
+  String temperatureString = String(currentTemperature, 1);
+  String temperatureToShow = "";
+  int dotPosition = temperatureString.indexOf(".");
+  if (dotPosition > 0)
+  {
+    temperatureToShow += temperatureString.substring(0, dotPosition);
+    temperatureToShow += " ";
+    temperatureToShow += temperatureString.substring(dotPosition + 1);
+  }
+  else
+  {
+    temperatureToShow += temperatureString.substring(0);
+    temperatureToShow += " 0";
+  }
+  display2.showString(string2char(temperatureToShow));
 }
 
 void loop() {
