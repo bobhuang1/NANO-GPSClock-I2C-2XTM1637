@@ -226,10 +226,19 @@ void loop() {
     tm.Month = Month;
     tm.Year = Year - gpsToSystemYearConversion  ;
     setTime(makeTime(tm) + UTC_offset * SECS_PER_HOUR);
-    if (Second == 10)
+    DateTime rtcNow = realTimeClock.now();
+    int rtcYear = rtcNow.year();
+    int rtcMonth = rtcNow.month();
+    int rtcDay = rtcNow.day();
+    int rtcHour = rtcNow.hour();
+    int rtcMinute = rtcNow.minute();
+    if (rtcYear != year() || rtcMonth != month() || rtcDay != day() || rtcHour != hour() || rtcMinute != minute())
     {
+      Serial.println("RTC and system clock does not match! Setting now!");
       realTimeClock.adjust(DateTime(year(), month(), day(), hour(), minute(), second()));
       Serial.println("RTC time set from GPS!");
+      Serial.print("After set year: ");
+      Serial.println(realTimeClock.now().year());
     }
   }
   else
