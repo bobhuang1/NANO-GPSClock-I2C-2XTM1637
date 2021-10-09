@@ -3,6 +3,7 @@
 #include <TinyGPSPlus.h>
 #include <SoftwareSerial.h>
 #include <TM1637Display.h>
+#include <RTClib.h>
 
 #define RXPin 3
 #define TXPin 2
@@ -18,6 +19,7 @@ TM1637Display display1(CLKPin1, DIOPin1);
 TM1637Display display2(CLKPin2, DIOPin2);
 
 TinyGPSPlus gps;
+RTC_DS3231 realTimeClock;
 SoftwareSerial Serial_GPS = SoftwareSerial(RXPin, TXPin);
 time_t prevDisplay = 0; // Count for when time last displayed
 const uint8_t SEG_GPS1[] = {
@@ -69,19 +71,28 @@ const double ROOM_TEMP          = 298.15; // 298.15
 const double KELVIN_TO_CELCIUS  =  273.15; 
 const double RESISTOR_ROOM_TEMP = 96700.0; // 92700
 const double TEMPERATURE_CORRECTION = 0.25;
-double currentTemperature = -60.0;
-double mimimumTemperature = -60.0;
+double currentTemperature = -25.0;
+double mimimumTemperature = -25.0;
 int thermistorPin = A0;
 int vccPin = A2;
+int gpsMinimumYear = 2020;
+int gpsToSystemYearConversion = 1970;
 
 void setup()   {
   delay(100);
   Serial.begin(115200);
+  Serial.println("Program Begin.");
   display1.setBrightness(0xA);
   display1.setSegments(SEG_HELO);
   display2.setBrightness(0xA);
   display2.setSegments(SEG_HELO);
   Serial_GPS.begin(GPSBaud); // Start GPS Serial Connection
+  if (!realTimeClock.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+  }
+  realTimeClock.disableAlarm(1); // turn off alarm 1
+  realTimeClock.disableAlarm(2); // turn off alarm 2
   smartDelay(2000);
 }
 
@@ -114,17 +125,17 @@ void getTemperature() {
     adcVccAverage += adcVccSamples[i];
   }
   adcAverage /= SAMPLE_NUMBER;        // . . . average it w/ divide
-Serial.print("adcAverage: ");
-Serial.println(adcAverage);
+//Serial.print("adcAverage: ");
+//Serial.println(adcAverage);
 
   adcVccAverage /= SAMPLE_NUMBER;
-Serial.print("adcVccAverage: ");
-Serial.println(adcVccAverage);
+//Serial.print("adcVccAverage: ");
+//Serial.println(adcVccAverage);
   /* Here we calculate the thermistor’s resistance using the equation 
      discussed in the article. */
   rThermistor = BALANCE_RESISTOR * adcAverage / (adcVccAverage - adcAverage);
-Serial.print("rThermistor: ");
-Serial.println(rThermistor);
+//Serial.print("rThermistor: ");
+//Serial.println(rThermistor);
 
   /* Here is where the Beta equation is used, but it is different
      from what the article describes. Don't worry! It has been rearranged
@@ -146,9 +157,8 @@ Serial.println(rThermistor);
      I leave it up to you to either change this function, or create
      another function which converts between the two units. */
   currentTemperature = tKelvin - KELVIN_TO_CELCIUS + TEMPERATURE_CORRECTION ;  // convert kelvin to celsius 
-Serial.print("currentTemperature: ");
-Serial.println(currentTemperature);
-
+//  Serial.print("currentTemperature: ");
+//  Serial.println(currentTemperature);
 }
 
 char* string2char(String command){
@@ -180,12 +190,14 @@ void loop() {
   getTemperature();  
   smartDelay(100);
   Year = gps.date.year();
-  byte Month = gps.date.month();
-  byte Day = gps.date.day();
-  byte Hour = gps.time.hour();
-  byte Minute = gps.time.minute();
-  byte Second = gps.time.second();
-  if (Year > 2017)
+  Serial.print("GPS Year: ");
+  Serial.println(Year);
+  int Month = gps.date.month();
+  int Day = gps.date.day();
+  int Hour = gps.time.hour();
+  int Minute = gps.time.minute();
+  int Second = gps.time.second();
+  if (Year > gpsMinimumYear)
   {
     tmElements_t tm;
     tm.Second = Second;
@@ -193,82 +205,108 @@ void loop() {
     tm.Minute = Minute;
     tm.Day = Day;
     tm.Month = Month;
-    tm.Year = Year - 1970;
+    tm.Year = Year - gpsToSystemYearConversion  ;
     setTime(makeTime(tm) + UTC_offset * SECS_PER_HOUR);
+    if (Second == 10)
+    {
+      realTimeClock.adjust(DateTime(Year, Month, Day, Hour, Minute, Second));
+      Serial.println("RTC time set from GPS!");
+    }
   }
   else
   {
-    if (millis() - prevAnimationDisplay > 200)
+    DateTime rtcNow = realTimeClock.now();
+    int rtcYear = rtcNow.year();
+    int rtcMonth = rtcNow.month();
+    int rtcDay = rtcNow.day();
+    int rtcHour = rtcNow.hour();
+    int rtcMinute = rtcNow.minute();
+    int rtcSecond = rtcNow.second();
+    if (rtcYear > gpsMinimumYear)
     {
-      prevAnimationDisplay = millis();
-      if (GPSAnimationCounter == 0)
+      tmElements_t tm;
+      tm.Second = rtcSecond;
+      tm.Hour = rtcHour;
+      tm.Minute = rtcMinute;
+      tm.Day = rtcDay;
+      tm.Month = rtcMonth;
+      tm.Year = rtcYear - gpsToSystemYearConversion;
+      setTime(makeTime(tm));
+    }
+    else
+    {
+      if (millis() - prevAnimationDisplay > 200)
       {
-        display1.setSegments(SEG_GPS1);
-        if (currentTemperature > mimimumTemperature)
+        prevAnimationDisplay = millis();
+        if (GPSAnimationCounter == 0)
         {
-          showTemperature();
+          display1.setSegments(SEG_GPS1);
+          if (currentTemperature > mimimumTemperature)
+          {
+            showTemperature();
+          }
+          else
+          {
+            display2.setSegments(SEG_GPS1);
+          }
         }
-        else
+        else if (GPSAnimationCounter == 1)
         {
-          display2.setSegments(SEG_GPS1);
+          display1.setSegments(SEG_GPS2);
+          if (currentTemperature > mimimumTemperature)
+          {
+            showTemperature();
+          }
+          else
+          {
+            display2.setSegments(SEG_GPS2);
+          }
         }
-      }
-      else if (GPSAnimationCounter == 1)
-      {
-        display1.setSegments(SEG_GPS2);
-        if (currentTemperature > mimimumTemperature)
+        else if (GPSAnimationCounter == 2)
         {
-          showTemperature();
+          display1.setSegments(SEG_GPS3);
+          if (currentTemperature > mimimumTemperature)
+          {
+            showTemperature();
+          }
+          else
+          {
+            display2.setSegments(SEG_GPS3);
+          }
         }
-        else
+        else if (GPSAnimationCounter == 3)
         {
-          display2.setSegments(SEG_GPS2);
+          display1.setSegments(SEG_GPS4);
+          if (currentTemperature > mimimumTemperature)
+          {
+            showTemperature();
+          }
+          else
+          {
+            display2.setSegments(SEG_GPS4);
+          }
         }
-      }
-      else if (GPSAnimationCounter == 2)
-      {
-        display1.setSegments(SEG_GPS3);
-        if (currentTemperature > mimimumTemperature)
+        GPSAnimationCounter++;
+        if (GPSAnimationCounter > 3)
         {
-          showTemperature();
+          GPSAnimationCounter = 0;
         }
-        else
-        {
-          display2.setSegments(SEG_GPS3);
-        }
-      }
-      else if (GPSAnimationCounter == 3)
-      {
-        display1.setSegments(SEG_GPS4);
-        if (currentTemperature > mimimumTemperature)
-        {
-          showTemperature();
-        }
-        else
-        {
-          display2.setSegments(SEG_GPS4);
-        }
-      }
-      GPSAnimationCounter++;
-      if (GPSAnimationCounter > 3)
-      {
-        GPSAnimationCounter = 0;
       }
     }
   }
 
-  if (timeStatus() != timeNotSet) {
-    if (hour() >= 6 && hour() < 18)
-    {
-      display1.setBrightness(0xF);
-      display2.setBrightness(0xF);
-    }
-    else
-    {
-      display1.setBrightness(0x9);
-      display2.setBrightness(0x9);
-    }
+  if (hour() >= 6 && hour() < 18)
+  {
+    display1.setBrightness(0xF);
+    display2.setBrightness(0xF);
+  }
+  else
+  {
+    display1.setBrightness(0x9);
+    display2.setBrightness(0x9);
+  }
 
+  if (timeStatus() != timeNotSet) {
     if (now() != prevDisplay) {
       prevDisplay = now();
       if (counter < 10)
@@ -284,8 +322,11 @@ void loop() {
       display2.showNumberDec(Clock, true);
       if (counter == 10)
       {
-        showTemperature();
-        smartDelay(3000);
+       if (currentTemperature > mimimumTemperature)
+       {
+          showTemperature();
+          smartDelay(3000);
+       }
       }
       counter++;
       if (counter > 10)
