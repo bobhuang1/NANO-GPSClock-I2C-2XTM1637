@@ -71,8 +71,8 @@ const double ROOM_TEMP          = 298.15; // 298.15
 const double KELVIN_TO_CELCIUS  =  273.15; 
 const double RESISTOR_ROOM_TEMP = 96700.0; // 92700
 const double TEMPERATURE_CORRECTION = 0.25;
-double currentTemperature = -25.0;
-double mimimumTemperature = -25.0;
+double currentTemperature = -30.0;
+double mimimumTemperature = -30.0;
 int thermistorPin = A0;
 int vccPin = A2;
 int gpsMinimumYear = 2020;
@@ -157,8 +157,8 @@ void getTemperature() {
      I leave it up to you to either change this function, or create
      another function which converts between the two units. */
   currentTemperature = tKelvin - KELVIN_TO_CELCIUS + TEMPERATURE_CORRECTION ;  // convert kelvin to celsius 
-//  Serial.print("currentTemperature: ");
-//  Serial.println(currentTemperature);
+  Serial.print("currentTemperature: ");
+  Serial.println(currentTemperature);
 }
 
 char* string2char(String command){
@@ -169,21 +169,40 @@ char* string2char(String command){
 }
 
 void showTemperature() {
-  String temperatureString = String(currentTemperature, 1);
-  String temperatureToShow = "";
-  int dotPosition = temperatureString.indexOf(".");
-  if (dotPosition > 0)
+  if (currentTemperature < 0)
   {
-    temperatureToShow += temperatureString.substring(0, dotPosition);
-    temperatureToShow += " ";
-    temperatureToShow += temperatureString.substring(dotPosition + 1);
+    Serial.println("currentTemperature < 0");
+    String temperatureString = String(-currentTemperature, 1);
+    String temperatureToShow = "0 ";
+    int dotPosition = temperatureString.indexOf(".");
+    if (dotPosition > 0)
+    {
+      temperatureToShow += temperatureString.substring(0, dotPosition);
+    }
+    else
+    {
+      temperatureToShow += temperatureString.substring(0);
+    }
+    display2.showString(string2char(temperatureToShow));
   }
   else
   {
-    temperatureToShow += temperatureString.substring(0);
-    temperatureToShow += " 0";
+    String temperatureString = String(currentTemperature, 1);
+    String temperatureToShow = "";
+    int dotPosition = temperatureString.indexOf(".");
+    if (dotPosition > 0)
+    {
+      temperatureToShow += temperatureString.substring(0, dotPosition);
+      temperatureToShow += " ";
+      temperatureToShow += temperatureString.substring(dotPosition + 1);
+    }
+    else
+    {
+      temperatureToShow += temperatureString.substring(0);
+      temperatureToShow += " 0";
+    }
+    display2.showString(string2char(temperatureToShow));
   }
-  display2.showString(string2char(temperatureToShow));
 }
 
 void loop() {
@@ -209,7 +228,7 @@ void loop() {
     setTime(makeTime(tm) + UTC_offset * SECS_PER_HOUR);
     if (Second == 10)
     {
-      realTimeClock.adjust(DateTime(Year, Month, Day, Hour, Minute, Second));
+      realTimeClock.adjust(DateTime(year(), month(), day(), hour(), minute(), second()));
       Serial.println("RTC time set from GPS!");
     }
   }
