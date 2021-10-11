@@ -2,7 +2,7 @@
 #include <TimeLib.h>                   // struct timeval
 #include <TinyGPSPlus.h>
 #include <SoftwareSerial.h>
-#include <TM1637Display.h>
+#include <TM1637TinyDisplay.h>
 #include <RTClib.h>
 
 #define RXPin 3
@@ -15,47 +15,13 @@
 #define DIOPin1 8
 #define CLKPin2 6
 #define DIOPin2 5
-TM1637Display display1(CLKPin1, DIOPin1);
-TM1637Display display2(CLKPin2, DIOPin2);
+TM1637TinyDisplay display1(CLKPin1, DIOPin1);
+TM1637TinyDisplay display2(CLKPin2, DIOPin2);
 
 TinyGPSPlus gps;
 RTC_DS3231 realTimeClock;
 SoftwareSerial Serial_GPS = SoftwareSerial(RXPin, TXPin);
 time_t prevDisplay = 0; // Count for when time last displayed
-const uint8_t SEG_GPS1[] = {
-  SEG_A | SEG_C | SEG_D | SEG_E | SEG_F,   // G
-  SEG_A | SEG_B | SEG_E | SEG_F | SEG_G,   // P
-  SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,   // S
-  SEG_G                                    // -
-};
-
-const uint8_t SEG_GPS2[] = {
-  SEG_A | SEG_B | SEG_E | SEG_F | SEG_G,   // P
-  SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,   // S
-  SEG_G,                                   // -
-  SEG_A | SEG_C | SEG_D | SEG_E | SEG_F    // G
-};
-
-const uint8_t SEG_GPS3[] = {
-  SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,   // S
-  SEG_G,                                   // -
-  SEG_A | SEG_C | SEG_D | SEG_E | SEG_F,   // G
-  SEG_A | SEG_B | SEG_E | SEG_F | SEG_G    // P
-};
-
-const uint8_t SEG_GPS4[] = {
-  SEG_G,                                   // -
-  SEG_A | SEG_C | SEG_D | SEG_E | SEG_F,   // G
-  SEG_A | SEG_B | SEG_E | SEG_F | SEG_G,   // P
-  SEG_A | SEG_C | SEG_D | SEG_F | SEG_G    // S
-};
-
-const uint8_t SEG_HELO[] = {
-  SEG_B | SEG_C | SEG_E | SEG_F | SEG_G,   // H
-  SEG_A | SEG_D | SEG_E | SEG_F | SEG_G,   // E
-  SEG_D | SEG_E | SEG_F,   // L
-  SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F   // O
-};
 
 int Year = -1;
 int counter = 0;
@@ -71,8 +37,8 @@ const double ROOM_TEMP          = 298.15; // 298.15
 const double KELVIN_TO_CELCIUS  =  273.15; 
 const double RESISTOR_ROOM_TEMP = 96700.0; // 92700
 const double TEMPERATURE_CORRECTION = 0.25;
-double currentTemperature = -30.0;
-double mimimumTemperature = -30.0;
+double currentTemperature = -40.0;
+double mimimumTemperature = -40.0;
 int thermistorPin = A0;
 int vccPin = A2;
 int gpsMinimumYear = 2020;
@@ -82,10 +48,12 @@ void setup()   {
   delay(100);
   Serial.begin(115200);
   Serial.println("Program Begin.");
+  display1.clear();
+  display2.clear();
   display1.setBrightness(0xA);
-  display1.setSegments(SEG_HELO);
   display2.setBrightness(0xA);
-  display2.setSegments(SEG_HELO);
+  display1.showString("HELO");
+  display2.showString("HELO");
   Serial_GPS.begin(GPSBaud); // Start GPS Serial Connection
   if (!realTimeClock.begin()) {
     Serial.println("Couldn't find RTC");
@@ -93,7 +61,7 @@ void setup()   {
   }
   realTimeClock.disableAlarm(1); // turn off alarm 1
   realTimeClock.disableAlarm(2); // turn off alarm 2
-  smartDelay(2000);
+  smartDelay(1000);
 }
 
 void getTemperature() {
@@ -169,40 +137,47 @@ char* string2char(String command){
 }
 
 void showTemperature() {
-  if (currentTemperature < 0)
+  display2.clear();
+  char degree[] = "\xB0";
+  String temperatureToShow = "";
+  if (currentTemperature > 0)
   {
-    Serial.println("currentTemperature < 0");
-    String temperatureString = String(-currentTemperature, 1);
-    String temperatureToShow = "0 ";
-    int dotPosition = temperatureString.indexOf(".");
-    if (dotPosition > 0)
+    if (currentTemperature < 10)
     {
-      temperatureToShow += temperatureString.substring(0, dotPosition);
-    }
-    else
-    {
-      temperatureToShow += temperatureString.substring(0);
-    }
-    display2.showString(string2char(temperatureToShow));
-  }
-  else
-  {
-    String temperatureString = String(currentTemperature, 1);
-    String temperatureToShow = "";
-    int dotPosition = temperatureString.indexOf(".");
-    if (dotPosition > 0)
-    {
-      temperatureToShow += temperatureString.substring(0, dotPosition);
       temperatureToShow += " ";
+    }
+    String temperatureString = String(currentTemperature, 1);
+    int dotPosition = temperatureString.indexOf(".");
+    if (dotPosition > 0)
+    {
+      temperatureToShow += temperatureString.substring(0, dotPosition);
       temperatureToShow += temperatureString.substring(dotPosition + 1);
     }
     else
     {
       temperatureToShow += temperatureString.substring(0);
-      temperatureToShow += " 0";
+      temperatureToShow += "0";
     }
-    display2.showString(string2char(temperatureToShow));
+    if (currentTemperature < 100)
+    {
+      display2.showString(string2char(temperatureToShow), 3, 0, 0b01000000);
+    }
+    else
+    {
+      display2.showString(string2char(temperatureToShow), 3, 0);
+    }
   }
+  else
+  {
+    temperatureToShow += "-";
+    if (currentTemperature > -10)
+    {
+      temperatureToShow += " ";
+    }
+    temperatureToShow += round(-currentTemperature);
+    display2.showString(string2char(temperatureToShow), 3, 0);
+  }
+  display2.showString(degree, 1, 3);
 }
 
 void loop() {
@@ -268,50 +243,50 @@ void loop() {
         prevAnimationDisplay = millis();
         if (GPSAnimationCounter == 0)
         {
-          display1.setSegments(SEG_GPS1);
+          display1.showString("GPS-");
           if (currentTemperature > mimimumTemperature)
           {
             showTemperature();
           }
           else
           {
-            display2.setSegments(SEG_GPS1);
+            display2.showString("GPS-");
           }
         }
         else if (GPSAnimationCounter == 1)
         {
-          display1.setSegments(SEG_GPS2);
+          display1.showString("PS-G");
           if (currentTemperature > mimimumTemperature)
           {
             showTemperature();
           }
           else
           {
-            display2.setSegments(SEG_GPS2);
+            display2.showString("PS-G");
           }
         }
         else if (GPSAnimationCounter == 2)
         {
-          display1.setSegments(SEG_GPS3);
+          display1.showString("S-GP");
           if (currentTemperature > mimimumTemperature)
           {
             showTemperature();
           }
           else
           {
-            display2.setSegments(SEG_GPS3);
+            display2.showString("S-GP");
           }
         }
         else if (GPSAnimationCounter == 3)
         {
-          display1.setSegments(SEG_GPS4);
+          display1.showString("-GPS");
           if (currentTemperature > mimimumTemperature)
           {
             showTemperature();
           }
           else
           {
-            display2.setSegments(SEG_GPS4);
+            display2.showString("-GPS");
           }
         }
         GPSAnimationCounter++;
