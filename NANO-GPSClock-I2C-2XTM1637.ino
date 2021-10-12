@@ -11,6 +11,8 @@
 #define UTC_offset 8 // China Standard Time
 #define SECS_PER_HOUR  3600
 
+#define HELLOTEXT "HELO"
+
 #define CLKPin1 9
 #define DIOPin1 8
 #define CLKPin2 6
@@ -22,6 +24,8 @@ TinyGPSPlus gps;
 RTC_DS3231 realTimeClock;
 SoftwareSerial Serial_GPS = SoftwareSerial(RXPin, TXPin);
 time_t prevDisplay = 0; // Count for when time last displayed
+
+const char *GPSTEXT[] = {"GPS-", "PS-G", "S-GP", "-GPS"};
 
 int Year = -1;
 int counter = 0;
@@ -52,8 +56,8 @@ void setup()   {
   display2.clear();
   display1.setBrightness(0xA);
   display2.setBrightness(0xA);
-  display1.showString("HELO");
-  display2.showString("HELO");
+  display1.showString(HELLOTEXT);
+  display2.showString(HELLOTEXT);
   Serial_GPS.begin(GPSBaud); // Start GPS Serial Connection
   if (!realTimeClock.begin()) {
     Serial.println("Couldn't find RTC");
@@ -241,53 +245,14 @@ void loop() {
       if (millis() - prevAnimationDisplay > 200)
       {
         prevAnimationDisplay = millis();
-        if (GPSAnimationCounter == 0)
+        display1.showString(GPSTEXT[GPSAnimationCounter]);
+        if (currentTemperature > mimimumTemperature)
         {
-          display1.showString("GPS-");
-          if (currentTemperature > mimimumTemperature)
-          {
-            showTemperature();
-          }
-          else
-          {
-            display2.showString("GPS-");
-          }
+          showTemperature();
         }
-        else if (GPSAnimationCounter == 1)
+        else
         {
-          display1.showString("PS-G");
-          if (currentTemperature > mimimumTemperature)
-          {
-            showTemperature();
-          }
-          else
-          {
-            display2.showString("PS-G");
-          }
-        }
-        else if (GPSAnimationCounter == 2)
-        {
-          display1.showString("S-GP");
-          if (currentTemperature > mimimumTemperature)
-          {
-            showTemperature();
-          }
-          else
-          {
-            display2.showString("S-GP");
-          }
-        }
-        else if (GPSAnimationCounter == 3)
-        {
-          display1.showString("-GPS");
-          if (currentTemperature > mimimumTemperature)
-          {
-            showTemperature();
-          }
-          else
-          {
-            display2.showString("-GPS");
-          }
+          display2.showString(GPSTEXT[GPSAnimationCounter]);
         }
         GPSAnimationCounter++;
         if (GPSAnimationCounter > 3)
