@@ -1,0 +1,25 @@
+GPS
+RXPin 3
+TXPin 2
+
+TM1637-1 For Clock
+TM1637-1 Clock/CLK 9
+TM1637-1 Data/IO 8
+
+TM1637-2 For Month Temperature
+TM1637-1 Clock/CLK 6
+TM1637-1 Data/IO 5
+
+ThermistorPin A0
+VCC Pin A2
+
+NTC 10K 3950
+
+
+
+GPS C3-370B9
+VCC Black
+TX Yellow
+RX Green
+GND Blue
+4800 Baud
