@@ -55,8 +55,8 @@ void setup()   {
   Serial.println("Program Begin.");
   display1.clear();
   display2.clear();
-  display1.setBrightness(0xA);
-  display2.setBrightness(0xA);
+  display1.setBrightness(7);
+  display2.setBrightness(7);
   display1.showString(HELLOTEXT);
   getTemperature();
   showTemperature();
@@ -144,46 +144,54 @@ char* string2char(String command){
 
 void showTemperature() {
   display2.clear();
-  char degree[] = "\xB0";
-  String temperatureToShow = "";
-  if (currentTemperature > 0)
+  display2.showString("\xB0", 1, 3);        // Degree Mark, length=1, position=3 (right)
+  display2.showNumber(currentTemperature, 1, 3, 0);    // Number, length=3, position=0 (left)
+}
+
+void setAllBrightness() {
+  int brightnessLevel = 0;
+  if (hour() >= 9 && hour() < 16)
   {
-    if (currentTemperature < 10)
-    {
-      temperatureToShow += " ";
-    }
-    String temperatureString = String(currentTemperature, 1);
-    int dotPosition = temperatureString.indexOf(".");
-    if (dotPosition > 0)
-    {
-      temperatureToShow += temperatureString.substring(0, dotPosition);
-      temperatureToShow += temperatureString.substring(dotPosition + 1);
-    }
-    else
-    {
-      temperatureToShow += temperatureString.substring(0);
-      temperatureToShow += "0";
-    }
-    if (currentTemperature < 100)
-    {
-      display2.showString(string2char(temperatureToShow), 3, 0, 0b01000000);
-    }
-    else
-    {
-      display2.showString(string2char(temperatureToShow), 3, 0);
-    }
+    brightnessLevel = 7;
+  }
+  else if (hour() == 8 || hour() == 16)
+  {
+    brightnessLevel = 7;
+  }
+  else if (hour() == 7 || hour() == 17)
+  {
+    brightnessLevel = 6;
+  }
+  else if (hour() == 6)
+  {
+    brightnessLevel = 5;
+  }
+  else if (hour() == 5)
+  {
+    brightnessLevel = 4;
+  }
+  else if (hour() < 5)
+  {
+    brightnessLevel = 3;
+  }
+  else if (hour() >= 18 && hour() < 21)
+  {
+    brightnessLevel = 5;
+  }
+  else if (hour() >= 21 && hour() < 23)
+  {
+    brightnessLevel = 4;
+  }
+  else if (hour() >= 23)
+  {
+    brightnessLevel = 3;
   }
   else
   {
-    temperatureToShow += "-";
-    if (currentTemperature > -10)
-    {
-      temperatureToShow += " ";
-    }
-    temperatureToShow += round(-currentTemperature);
-    display2.showString(string2char(temperatureToShow), 3, 0);
+    brightnessLevel = 0;
   }
-  display2.showString(degree, 1, 3);
+  display1.setBrightness(brightnessLevel);
+  display2.setBrightness(brightnessLevel);
 }
 
 void loop() {
@@ -265,24 +273,22 @@ void loop() {
     }
   }
 
-  if (hour() >= 6 && hour() < 18)
-  {
-    display1.setBrightness(0xF);
-    display2.setBrightness(0xF);
-  }
-  else
-  {
-    display1.setBrightness(0x9);
-    display2.setBrightness(0x9);
-  }
-
+  setAllBrightness();
+  
   if (timeStatus() != timeNotSet) {
     if (now() != prevDisplay) {
       prevDisplay = now();
       if (counter < 10)
       {
         int Clock = hour() * 100 + minute();
-        display1.showNumberDec(Clock, true);
+        if (Clock < 100)
+        {
+          display1.showNumber(Clock, true);
+        }
+        else
+        {
+          display1.showNumber(Clock, false);
+        }
         smartDelay(500);
         uint8_t segto = 0x80 | display1.encodeDigit((Clock / 100) % 10);
         display1.setSegments(&segto, 1, 1);
