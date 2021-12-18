@@ -55,8 +55,8 @@ void setup()   {
   Serial.println("Program Begin.");
   display1.clear();
   display2.clear();
-  display1.setBrightness(7);
-  display2.setBrightness(7);
+  display1.setBrightness(4);
+  display2.setBrightness(4);
   display1.showString(HELLOTEXT);
   getTemperature();
   showTemperature();
@@ -156,35 +156,35 @@ void setAllBrightness() {
   }
   else if (hour() == 8 || hour() == 16)
   {
-    brightnessLevel = 7;
+    brightnessLevel = 5;
   }
   else if (hour() == 7 || hour() == 17)
   {
-    brightnessLevel = 6;
+    brightnessLevel = 4;
   }
   else if (hour() == 6)
   {
-    brightnessLevel = 5;
+    brightnessLevel = 3;
   }
   else if (hour() == 5)
   {
-    brightnessLevel = 4;
+    brightnessLevel = 2;
   }
   else if (hour() < 5)
   {
-    brightnessLevel = 3;
+    brightnessLevel = 1;
   }
   else if (hour() >= 18 && hour() < 21)
   {
-    brightnessLevel = 5;
+    brightnessLevel = 3;
   }
   else if (hour() >= 21 && hour() < 23)
   {
-    brightnessLevel = 4;
+    brightnessLevel = 2;
   }
   else if (hour() >= 23)
   {
-    brightnessLevel = 3;
+    brightnessLevel = 1;
   }
   else
   {
