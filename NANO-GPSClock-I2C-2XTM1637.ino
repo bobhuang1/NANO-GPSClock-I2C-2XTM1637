@@ -25,7 +25,8 @@ RTC_DS3231 realTimeClock;
 SoftwareSerial Serial_GPS = SoftwareSerial(RXPin, TXPin);
 time_t prevDisplay = 0; // Count for when time last displayed
 
-const char *GPSTEXT[] = {"GPS-", "PS-G", "S-GP", "-GPS"};
+const int GPSTEXT_SIZE = 16; // WAIT FOR GPS----
+const char *GPSTEXT[GPSTEXT_SIZE] = {"WAIT", "AIT ", "IT F", "T FO", " FOR", "FOR ", "OR G", "R GP", " GPS", "GPS-", "PS--", "S---", "----", "---W", "--WA", "-WAI"};
 
 int Year = -1;
 int counter = 0;
@@ -57,7 +58,8 @@ void setup()   {
   display1.setBrightness(0xA);
   display2.setBrightness(0xA);
   display1.showString(HELLOTEXT);
-  display2.showString(HELLOTEXT);
+  getTemperature();
+  showTemperature();
   Serial_GPS.begin(GPSBaud); // Start GPS Serial Connection
   if (!realTimeClock.begin()) {
     Serial.println("Couldn't find RTC");
@@ -185,7 +187,7 @@ void showTemperature() {
 }
 
 void loop() {
-  getTemperature();  
+  getTemperature();
   smartDelay(100);
   Year = gps.date.year();
   Serial.print("GPS Year: ");
@@ -255,7 +257,7 @@ void loop() {
           display2.showString(GPSTEXT[GPSAnimationCounter]);
         }
         GPSAnimationCounter++;
-        if (GPSAnimationCounter > 3)
+        if (GPSAnimationCounter >= GPSTEXT_SIZE)
         {
           GPSAnimationCounter = 0;
         }
