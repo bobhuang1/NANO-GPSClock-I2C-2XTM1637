@@ -23,3 +23,5 @@ TM1637 displays, DS3231 RTC, thermistor).
 - [TM1637TinyDisplay](https://github.com/jasonacox/TM1637TinyDisplay)
 - [RTClib](https://github.com/adafruit/RTClib) (DS3231 support)
 - [Time](https://github.com/PaulStoffregen/Time) (`TimeLib.h`)
+- `StringHelpers.h`/`.cpp` ([source](https://github.com/bobhuang1/ESP8266-Functions-Common/tree/master/StringHelpers)),
+  vendored directly into this repo - re-copy from there if it's updated.

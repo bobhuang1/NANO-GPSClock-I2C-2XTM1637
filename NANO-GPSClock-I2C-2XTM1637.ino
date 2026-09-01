@@ -4,6 +4,7 @@
 #include <SoftwareSerial.h>
 #include <TM1637TinyDisplay.h>
 #include <RTClib.h>
+#include "StringHelpers.h"
 
 #define RXPin 3
 #define TXPin 2
@@ -134,10 +135,6 @@ void getTemperature() {
   currentTemperature = tKelvin - KELVIN_TO_CELCIUS + TEMPERATURE_CORRECTION ;  // convert kelvin to celsius 
   Serial.print("currentTemperature: ");
   Serial.println(currentTemperature);
-}
-
-char* string2char(String command){
-    return const_cast<char*>(command.c_str());
 }
 
 void showTemperature() {
