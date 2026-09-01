@@ -7,3 +7,7 @@ char* string2char(String command) {
 	// (undefined behavior). No special-casing needed.
 	return const_cast<char*>(command.c_str());
 }
+
+String intToTwoDigitString(int value) {
+	return value > 9 ? String(value) : "0" + String(value);
+}
