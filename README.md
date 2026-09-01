@@ -1,42 +1,25 @@
 # NANO-GPSClock-I2C-2XTM1637
-NANO-GPSClock-I2C-2XTM1637
 
-A GPS clock for automobiles. 
+A GPS-synced clock for cars, built on an Arduino Nano.
 
 Features:
-1. Two display modules, one for hour:minute and other for month/temperature
-2. Includes a precision real-time clock (RTC) module for backup, so that clock works as soon as the power is turned on, and anywhere even when GPS signal is not available
-3. Automatic correction of RTC when GPS is available
-4. Uses a cheap NTC 10K resistor (commonly used in 3D printers) to meature vehicle internal temperature
-5. All parts are bought cheap from taobao.com with free shipping
+1. Two 7-segment display modules: one shows hour:minute, the other cycles
+   between month/day and cabin temperature.
+2. A DS3231 real-time clock module keeps time as a backup, so the clock
+   works immediately on power-up and continues even when GPS signal is
+   unavailable (common in tunnels/parking garages).
+3. The RTC is automatically corrected from GPS whenever a fix is available.
+4. A cheap 10K NTC thermistor (the kind commonly used in 3D printers) reads
+   the vehicle's internal temperature.
 
-Pins used on Nano are shown below
+## Hardware
 
-Arduino Nano clone, 12 RMB
+See [Wiring.txt](Wiring.txt) for the full pin mapping (GPS module, two
+TM1637 displays, DS3231 RTC, thermistor).
 
-GPS Module, Model C3-370B9, 10 RMB, old modules, normally needs 3-5 minues to acquire GPS singal
-VCC Black
-TX Yellow
-RX Green
-GND Blue
-4800 Baud/GPS mode set with AT command on PC with PUTTY
-GPS RXPin D3
-GPS TXPin D2
+## Dependencies
 
-Two Display Modules, total 10 RMB
-TM1637-1 For Clock
-TM1637-1 Clock/CLK D9
-TM1637-1 Data/IO D8
-TM1637-2 For Month Temperature
-TM1637-1 Clock/CLK D6
-TM1637-1 Data/IO D5
-
-Real-Time Clock Module DS3231, 12 RMB
-Uses ADAFruit RTCLib.h
-SDA A4
-SCL A5
-
-NTC Resistor 10K 3950, 2 RMB
-ThermistorPin A0
-VCC Pin A2 (for voltage correction)
-
+- [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus)
+- [TM1637TinyDisplay](https://github.com/jasonacox/TM1637TinyDisplay)
+- [RTClib](https://github.com/adafruit/RTClib) (DS3231 support)
+- [Time](https://github.com/PaulStoffregen/Time) (`TimeLib.h`)

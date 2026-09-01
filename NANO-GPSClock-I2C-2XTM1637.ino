@@ -32,7 +32,8 @@ int Year = -1;
 int counter = 0;
 int GPSAnimationCounter = 0;
 long prevAnimationDisplay = 0; // Count for when time last displayed
-long prevTimeUpdate = 0;
+long prevTemperatureUpdate = 0;
+#define TEMPERATURE_UPDATE_INTERVAL_MS 2000 // engine bay temp changes slowly - no need to resample every loop
 
 // MF52D 2K, 3435 25C
 const int    SAMPLE_NUMBER      = 200;
@@ -136,10 +137,7 @@ void getTemperature() {
 }
 
 char* string2char(String command){
-    if(command.length()!=0){
-        char *p = const_cast<char*>(command.c_str());
-        return p;
-    }
+    return const_cast<char*>(command.c_str());
 }
 
 void showTemperature() {
@@ -195,7 +193,11 @@ void setAllBrightness() {
 }
 
 void loop() {
-  getTemperature();
+  if (millis() - prevTemperatureUpdate > TEMPERATURE_UPDATE_INTERVAL_MS)
+  {
+    prevTemperatureUpdate = millis();
+    getTemperature();
+  }
   smartDelay(100);
   Year = gps.date.year();
   Serial.print("GPS Year: ");
