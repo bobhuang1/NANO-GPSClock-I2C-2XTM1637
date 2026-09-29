@@ -79,8 +79,11 @@ void getTemperature() {
   double tCelsius    = 0;            // Hold temperature in celsius
   double adcAverage  = 0;            // Holds the average voltage measurement
   double adcVccAverage = 0;
-  int    adcSamples[SAMPLE_NUMBER];  // Array to hold each voltage measurement
-  int    adcVccSamples[SAMPLE_NUMBER];  // Array to hold each voltage measurement for Vcc
+  // static instead of stack locals: 2 x 200 ints = 800 B would otherwise sit on
+  // the stack of an ATmega328 (2 KB total RAM) on every call. Reuse between calls
+  // is safe - this function never runs re-entrantly or from an interrupt.
+  static int adcSamples[SAMPLE_NUMBER];       // Array to hold each voltage measurement
+  static int adcVccSamples[SAMPLE_NUMBER];    // Array to hold each voltage measurement for Vcc
    
   /* Calculate thermistor's average resistance:
      As mentioned in the top of the code, we will sample the ADC pin a few times
@@ -107,6 +110,13 @@ void getTemperature() {
   adcVccAverage /= SAMPLE_NUMBER;
 //Serial.print("adcVccAverage: ");
 //Serial.println(adcVccAverage);
+  if (adcVccAverage - adcAverage == 0)
+  {
+    // Thermistor shorted/open or an ADC misread: keep the previous reading
+    // instead of dividing by zero (which yields inf and corrupts the beta math).
+    Serial.println("getTemperature: degenerate ADC reading, keeping previous value");
+    return;
+  }
   /* Here we calculate the thermistor’s resistance using the equation 
      discussed in the article. */
   rThermistor = BALANCE_RESISTOR * adcAverage / (adcVccAverage - adcAverage);
@@ -143,48 +153,18 @@ void showTemperature() {
   display2.showNumber(currentTemperature, 1, 3, 0);    // Number, length=3, position=0 (left)
 }
 
+// Hour -> TM1637 brightness level (0-7). Covers all 24 hours explicitly so the
+// mapping is auditable at a glance; the previous if/else chain had an
+// unreachable final else and was fragile to edits.
+const uint8_t HOUR_BRIGHTNESS[24] = {
+  1, 1, 1, 1, 1, 2,        // 00-05 night
+  3, 4, 5, 7, 7, 7,        // 06-11
+  7, 7, 7, 7, 5, 4,        // 12-17
+  3, 3, 2, 2, 1, 1         // 18-23
+};
+
 void setAllBrightness() {
-  int brightnessLevel = 0;
-  if (hour() >= 9 && hour() < 16)
-  {
-    brightnessLevel = 7;
-  }
-  else if (hour() == 8 || hour() == 16)
-  {
-    brightnessLevel = 5;
-  }
-  else if (hour() == 7 || hour() == 17)
-  {
-    brightnessLevel = 4;
-  }
-  else if (hour() == 6)
-  {
-    brightnessLevel = 3;
-  }
-  else if (hour() == 5)
-  {
-    brightnessLevel = 2;
-  }
-  else if (hour() < 5)
-  {
-    brightnessLevel = 1;
-  }
-  else if (hour() >= 18 && hour() < 21)
-  {
-    brightnessLevel = 3;
-  }
-  else if (hour() >= 21 && hour() < 23)
-  {
-    brightnessLevel = 2;
-  }
-  else if (hour() >= 23)
-  {
-    brightnessLevel = 1;
-  }
-  else
-  {
-    brightnessLevel = 0;
-  }
+  int brightnessLevel = HOUR_BRIGHTNESS[hour() % 24];
   display1.setBrightness(brightnessLevel);
   display2.setBrightness(brightnessLevel);
 }
