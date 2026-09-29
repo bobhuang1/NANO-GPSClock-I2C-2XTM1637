@@ -30,4 +30,4 @@ jobs:
           printf '#include "LiquidCrystal_I2C.h"\n' > "$HOME/.arduino15/libraries/LiquidCrystal_I2C_Arduino/LiquidCrystal_I2C_Arduino.h"
 
       - name: Compile
-        run: arduino-cli compile --fqbn arduino:avr:nano --warnings none NANO-GPSClock-I2C-2XTM1637
+        run: arduino-cli compile --fqbn arduino:avr:nano --warnings none .
