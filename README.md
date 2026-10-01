@@ -25,3 +25,8 @@ TM1637 displays, DS3231 RTC, thermistor).
 - [Time](https://github.com/PaulStoffregen/Time) (`TimeLib.h`)
 - `StringHelpers.h`/`.cpp` ([source](https://github.com/bobhuang1/ESP8266-Functions-Common/tree/master/StringHelpers)),
   vendored directly into this repo - re-copy from there if it's updated.
+
+
+## License
+
+This project is free software, released under the **GNU General Public License v3.0**. You may redistribute and/or modify it under those terms; see [LICENSE.md](LICENSE.md) for the full text.
