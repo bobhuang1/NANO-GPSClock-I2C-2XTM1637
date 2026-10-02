@@ -36,19 +36,24 @@ long prevAnimationDisplay = 0; // Count for when time last displayed
 long prevTemperatureUpdate = 0;
 #define TEMPERATURE_UPDATE_INTERVAL_MS 2000 // engine bay temp changes slowly - no need to resample every loop
 
-// MF52D 2K, 3435 25C
+// 10K NTC thermistor, B = 3950 (the common 3D-printer type, see Wiring.txt), on the low
+// side of a divider with a 10K balance resistor to the A2 reference. If your balance
+// resistor differs, measure it and put the measured value in BALANCE_RESISTOR.
 const int    SAMPLE_NUMBER      = 200;
-const double BALANCE_RESISTOR   = 100300.0;
+const double BALANCE_RESISTOR   = 10000.0;
 const double BETA               = 3950.0;
-const double ROOM_TEMP          = 298.15; // 298.15
-const double KELVIN_TO_CELCIUS  =  273.15; 
-const double RESISTOR_ROOM_TEMP = 96700.0; // 92700
+const double ROOM_TEMP          = 298.15; // 25 C in kelvin
+const double KELVIN_TO_CELCIUS  =  273.15;
+const double RESISTOR_ROOM_TEMP = 10000.0; // thermistor resistance at 25 C
 const double TEMPERATURE_CORRECTION = 0.25;
 double currentTemperature = -40.0;
 double mimimumTemperature = -40.0;
 int thermistorPin = A0;
 int vccPin = A2;
 int gpsMinimumYear = 2020;
+#define GPS_MAX_AGE_MS 1500UL      // older GPS time is stale: fall back to the RTC
+bool rtcOk = false;                // DS3231 answered on I2C at boot
+bool rtcLostPower = false;         // DS3231 reported an oscillator stop (dead backup battery)
 int gpsToSystemYearConversion = 1970;
 
 void setup()   {
@@ -63,9 +68,12 @@ void setup()   {
   getTemperature();
   showTemperature();
   Serial_GPS.begin(GPSBaud); // Start GPS Serial Connection
-  if (!realTimeClock.begin()) {
+  rtcOk = realTimeClock.begin();
+  if (!rtcOk) {
     Serial.println("Couldn't find RTC");
     Serial.flush();
+  } else {
+    rtcLostPower = realTimeClock.lostPower();
   }
   realTimeClock.disableAlarm(1); // turn off alarm 1
   realTimeClock.disableAlarm(2); // turn off alarm 2
@@ -184,7 +192,13 @@ void loop() {
   int Hour = gps.time.hour();
   int Minute = gps.time.minute();
   int Second = gps.time.second();
-  if (Year > gpsMinimumYear)
+  // TinyGPSPlus keeps the last decoded date/time forever, so a stale value would keep
+  // resetting the clock to the moment the fix was lost (tunnels, garages). Only trust a
+  // timestamp decoded within the last 1.5 s; otherwise run from the RTC.
+  bool gpsFresh = gps.date.isValid() && gps.time.isValid()
+                  && gps.time.age() < GPS_MAX_AGE_MS
+                  && Year > gpsMinimumYear;
+  if (gpsFresh)
   {
     tmElements_t tm;
     tm.Second = Second;
@@ -200,10 +214,11 @@ void loop() {
     int rtcDay = rtcNow.day();
     int rtcHour = rtcNow.hour();
     int rtcMinute = rtcNow.minute();
-    if (rtcYear != year() || rtcMonth != month() || rtcDay != day() || rtcHour != hour() || rtcMinute != minute())
+    if (rtcOk && (rtcLostPower || rtcYear != year() || rtcMonth != month() || rtcDay != day() || rtcHour != hour() || rtcMinute != minute()))
     {
       Serial.println("RTC and system clock does not match! Setting now!");
       realTimeClock.adjust(DateTime(year(), month(), day(), hour(), minute(), second()));
+      rtcLostPower = false; // adjust() restarts the oscillator with a known-good time
       Serial.println("RTC time set from GPS!");
       Serial.print("After set year: ");
       Serial.println(realTimeClock.now().year());
@@ -218,7 +233,9 @@ void loop() {
     int rtcHour = rtcNow.hour();
     int rtcMinute = rtcNow.minute();
     int rtcSecond = rtcNow.second();
-    if (rtcYear > gpsMinimumYear)
+    // A missing DS3231 or one that lost its backup battery returns nonsense (often
+    // year 2165); show the "WAIT FOR GPS" animation instead of a garbage time.
+    if (rtcOk && !rtcLostPower && rtcYear > gpsMinimumYear && rtcYear < 2100)
     {
       tmElements_t tm;
       tm.Second = rtcSecond;
